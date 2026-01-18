@@ -5,6 +5,9 @@ import arrow.core.right
 import com.wakita181009.cleanarchitecture.domain.entity.jira.JiraIssue
 import com.wakita181009.cleanarchitecture.domain.error.JiraError
 import com.wakita181009.cleanarchitecture.domain.repository.jira.JiraIssueRepository
+import com.wakita181009.cleanarchitecture.domain.valueobject.Page
+import com.wakita181009.cleanarchitecture.domain.valueobject.PageNumber
+import com.wakita181009.cleanarchitecture.domain.valueobject.PageSize
 import com.wakita181009.cleanarchitecture.domain.valueobject.jira.JiraIssueId
 import com.wakita181009.cleanarchitecture.domain.valueobject.jira.JiraIssueKey
 import com.wakita181009.cleanarchitecture.domain.valueobject.jira.JiraIssuePriority
@@ -14,12 +17,13 @@ import com.wakita181009.cleanarchitecture.infrastructure.postgres_gen.enums.Jira
 import com.wakita181009.cleanarchitecture.infrastructure.postgres_gen.enums.JiraIssueTypeEnum
 import com.wakita181009.cleanarchitecture.infrastructure.postgres_gen.tables.records.JiraIssueRecord
 import com.wakita181009.cleanarchitecture.infrastructure.postgres_gen.tables.references.JIRA_ISSUE
-import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 
 @Repository
@@ -36,6 +40,15 @@ class JiraIssueRepositoryImpl(
                 JiraIssueType.BUG -> JiraIssueTypeEnum.bug
             }
 
+        private fun JiraIssueTypeEnum.toDomain(): JiraIssueType =
+            when (this) {
+                JiraIssueTypeEnum.epic -> JiraIssueType.EPIC
+                JiraIssueTypeEnum.story -> JiraIssueType.STORY
+                JiraIssueTypeEnum.task -> JiraIssueType.TASK
+                JiraIssueTypeEnum.subtask -> JiraIssueType.SUBTASK
+                JiraIssueTypeEnum.bug -> JiraIssueType.BUG
+            }
+
         private fun JiraIssuePriority.toDbEnum(): JiraIssuePriorityEnum =
             when (this) {
                 JiraIssuePriority.HIGHEST -> JiraIssuePriorityEnum.highest
@@ -43,6 +56,15 @@ class JiraIssueRepositoryImpl(
                 JiraIssuePriority.MEDIUM -> JiraIssuePriorityEnum.medium
                 JiraIssuePriority.LOW -> JiraIssuePriorityEnum.low
                 JiraIssuePriority.LOWEST -> JiraIssuePriorityEnum.lowest
+            }
+
+        private fun JiraIssuePriorityEnum.toDomain(): JiraIssuePriority =
+            when (this) {
+                JiraIssuePriorityEnum.highest -> JiraIssuePriority.HIGHEST
+                JiraIssuePriorityEnum.high -> JiraIssuePriority.HIGH
+                JiraIssuePriorityEnum.medium -> JiraIssuePriority.MEDIUM
+                JiraIssuePriorityEnum.low -> JiraIssuePriority.LOW
+                JiraIssuePriorityEnum.lowest -> JiraIssuePriority.LOWEST
             }
 
         private fun JiraIssue.toRecord(): JiraIssueRecord =
@@ -65,8 +87,8 @@ class JiraIssueRepositoryImpl(
                 key = JiraIssueKey(key!!),
                 summary = summary!!,
                 description = description.toString(),
-                issueType = JiraIssueType.valueOf(issueType!!.name),
-                priority = JiraIssuePriority.valueOf(priority!!.name),
+                issueType = issueType!!.toDomain(),
+                priority = priority!!.toDomain(),
                 createdAt = createdAt!!,
                 updatedAt = updatedAt!!,
             )
@@ -88,6 +110,39 @@ class JiraIssueRepositoryImpl(
             }.mapLeft { e ->
                 JiraError.DatabaseError(
                     message = "Failed to fetch JIRA issues: ${e.message}",
+                    cause = e,
+                )
+            }
+    }
+
+    override suspend fun list(
+        pageNumber: PageNumber,
+        pageSize: PageSize,
+    ): Either<JiraError, Page<JiraIssue>> {
+        val offset = (pageNumber.value - 1) * pageSize.value
+        val countMono =
+            dsl
+                .selectCount()
+                .from(JIRA_ISSUE)
+                .toMono()
+                .map { it.value1() }
+        val itemsMono =
+            Flux
+                .from(
+                    dsl
+                        .selectFrom(JIRA_ISSUE)
+                        .orderBy(JIRA_ISSUE.CREATED_AT.desc())
+                        .limit(pageSize.value)
+                        .offset(offset),
+                ).map { it.toDomain() }
+                .collectList()
+
+        return Either
+            .catch {
+                Mono.zip(countMono, itemsMono).map { Page(it.t1, it.t2) }.awaitSingle()
+            }.mapLeft { e ->
+                JiraError.DatabaseError(
+                    message = "Failed to list JIRA issues: ${e.message}",
                     cause = e,
                 )
             }

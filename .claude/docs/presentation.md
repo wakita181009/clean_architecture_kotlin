@@ -181,6 +181,92 @@ When GraphQL type has the same name as domain entity:
 import com.wakita181009.cleanarchitecture.domain.entity.jira.JiraIssue as DomainJiraIssue
 ```
 
+### Paginated List Types
+
+For paginated responses, implement `PaginatedList` interface:
+
+```kotlin
+// presentation/graphql/types/PaginatedList.kt
+interface PaginatedList {
+    val totalCount: Int
+}
+
+// presentation/graphql/types/JiraIssueList.kt
+@GraphQLDescription("Jira issue list type.")
+data class JiraIssueList(
+    val items: List<JiraIssue>,
+    override val totalCount: Int,
+) : PaginatedList {
+    companion object {
+        fun fromDomain(domain: Page<DomainJiraIssue>) =
+            JiraIssueList(
+                items = domain.items.map(JiraIssue::fromDomain),
+                totalCount = domain.totalCount,
+            )
+    }
+}
+```
+
+**Naming Convention**: `{Entity}List` for paginated list types.
+
+## Arrow Either Integration
+
+### EitherInstrumentation for Automatic Either Unwrapping
+
+`EitherInstrumentation` automatically unwraps `Either<Error, T>` results from resolvers:
+
+```kotlin
+// presentation/graphql/EitherInstrumentation.kt
+@Component
+class EitherInstrumentation : SimplePerformantInstrumentation() {
+    override fun instrumentDataFetcher(
+        dataFetcher: DataFetcher<*>?,
+        parameters: InstrumentationFieldFetchParameters?,
+        state: InstrumentationState?,
+    ): DataFetcher<*> {
+        return DataFetcher { environment ->
+            when (val originalResult = dataFetcher?.get(environment)) {
+                is Either<*, *> -> processEitherResult(originalResult)
+                is CompletableFuture<*> -> originalResult.thenApply { result ->
+                    if (result is Either<*, *>) processEitherResult(result) else result
+                }
+                else -> originalResult
+            }
+        }
+    }
+
+    private fun <R> processEitherResult(eitherResult: Either<*, R>): Any? =
+        eitherResult
+            .map { DataFetcherResult.newResult<Any>().data(it).build() }
+            .getOrElse { throw it as Throwable }
+}
+```
+
+**Benefits:**
+- Resolvers can return `Either<ApplicationError, T>` directly
+- Left values are automatically thrown as GraphQL errors
+- Right values are unwrapped and returned as data
+
+### Query with Either Return Type
+
+```kotlin
+@Controller
+class JiraIssueQuery(
+    private val jiraIssueListUseCase: JiraIssueListUseCase,
+) : Query {
+    @GraphQLDescription("Returns a list of JIRA issues.")
+    suspend fun jiraIssues(
+        pageNumber: Int = 1,
+        pageSize: Int = 100,
+    ) = either {
+        jiraIssueListUseCase
+            .execute(pageNumber, pageSize)
+            .map(JiraIssueList::fromDomain)
+            .bind()
+    }
+}
+```
+
 ## Custom Schema Generator Hooks
 
 ### Registering Custom Scalars and Monad Resolution

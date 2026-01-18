@@ -72,12 +72,73 @@ value class JiraIssueKey private constructor(
 }
 ```
 
+### Value Object with Either Validation
+
+For value objects that require validation, use `Either` with a dedicated error type:
+
+```kotlin
+// domain/valueobject/PageNumber.kt
+@JvmInline
+value class PageNumber private constructor(
+    val value: Int,
+) {
+    companion object {
+        const val MIN_VALUE: Int = 1
+
+        operator fun invoke(value: Int) = PageNumber(value)
+
+        fun of(value: Int) =
+            either {
+                ensure(value >= MIN_VALUE) { PageNumberError.BelowMinimum(value) }
+                PageNumber(value)
+            }
+    }
+}
+
+// domain/error/PageNumberError.kt
+sealed class PageNumberError(val message: String) {
+    data class BelowMinimum(val value: Int) : PageNumberError(
+        "Page number must be at least ${PageNumber.MIN_VALUE}, but was $value"
+    )
+}
+```
+
+**Pattern**: Two creation methods:
+- `invoke(value)` - Direct creation (trusted input, internal use)
+- `of(value): Either<Error, T>` - Validated creation (external input)
+
+### Pagination Value Objects
+
+Standard pagination types in `domain/valueobject/`:
+
+```kotlin
+// Page.kt - Generic paginated result
+data class Page<T>(
+    val totalCount: Int,
+    val items: List<T>,
+)
+
+// PageNumber.kt - 1-based page number
+@JvmInline value class PageNumber private constructor(val value: Int) { ... }
+
+// PageSize.kt - Page size with min/max constraints
+@JvmInline value class PageSize private constructor(val value: Int) {
+    companion object {
+        const val MIN_VALUE: Int = 1
+        const val MAX_VALUE: Int = 100
+        // ...
+    }
+}
+```
+
 ### Value Object Naming Conventions
 
 | Pattern | Example | Usage |
 |---------|---------|-------|
 | `{Entity}Id` | `JiraIssueId`, `JiraProjectId` | Primary identifiers |
 | `{Entity}Key` | `JiraIssueKey`, `JiraProjectKey` | External/business keys |
+| `Page{Number\|Size}` | `PageNumber`, `PageSize` | Pagination parameters |
+| `Page<T>` | `Page<JiraIssue>` | Paginated result wrapper |
 
 ## Enum Patterns
 

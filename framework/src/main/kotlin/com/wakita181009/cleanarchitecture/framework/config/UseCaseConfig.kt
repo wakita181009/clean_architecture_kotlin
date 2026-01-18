@@ -2,6 +2,7 @@ package com.wakita181009.cleanarchitecture.framework.config
 
 import com.wakita181009.cleanarchitecture.application.port.TransactionExecutor
 import com.wakita181009.cleanarchitecture.application.usecase.jira.JiraIssueFindByIdsUseCaseImpl
+import com.wakita181009.cleanarchitecture.application.usecase.jira.JiraIssueListUseCaseImpl
 import com.wakita181009.cleanarchitecture.application.usecase.jira.JiraIssueSyncUseCaseImpl
 import com.wakita181009.cleanarchitecture.domain.port.jira.JiraApiClient
 import com.wakita181009.cleanarchitecture.domain.repository.jira.JiraIssueRepository
@@ -19,6 +20,12 @@ open class UseCaseConfig(
     @Bean
     open fun jiraIssueFindByIdsUseCase() =
         JiraIssueFindByIdsUseCaseImpl(
+            jiraIssueRepository = jiraIssueRepository,
+        )
+
+    @Bean
+    open fun jiraIssueListUseCase() =
+        JiraIssueListUseCaseImpl(
             jiraIssueRepository = jiraIssueRepository,
         )
 

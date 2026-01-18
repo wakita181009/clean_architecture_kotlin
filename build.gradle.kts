@@ -32,13 +32,19 @@ allprojects {
         }
     }
 }
+
+subprojects {
+    apply(plugin = "org.jetbrains.kotlinx.kover")
+}
+
+kover {
+    merge {
+        allProjects()
+    }
+}
+
 dependencies {
     implementation(kotlin("stdlib"))
-    kover(project(":domain"))
-    kover(project(":application"))
-    kover(project(":infrastructure"))
-    kover(project(":presentation"))
-    kover(project(":framework"))
 }
 repositories {
     mavenCentral()
