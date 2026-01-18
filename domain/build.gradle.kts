@@ -9,6 +9,5 @@ dependencies {
     api(libs.arrow.fx.coroutines)
     api(libs.arrow.resilience)
     // Logging
-    api(libs.logback.classic)
-    api(libs.logback.core)
+    api(libs.slf4j.api)
 }

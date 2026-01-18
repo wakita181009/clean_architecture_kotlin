@@ -9,7 +9,7 @@ jooq = "3.19.29"
 okhttp = "5.3.2"
 resilience4j = "2.3.0"
 mockk = "1.14.7"
-logback = "1.5.25"
+slf4j = "2.0.17"
 kotest = "6.0.7"
 kotest-extensions-arrow = "2.0.0"
 kover = "0.9.4"
@@ -17,8 +17,7 @@ kover = "0.9.4"
 [libraries]
 arrow-fx-coroutines = { group = "io.arrow-kt", name = "arrow-fx-coroutines", version.ref = "arrow-kt" }
 arrow-resilience = { group = "io.arrow-kt", name = "arrow-resilience", version.ref = "arrow-kt" }
-logback-classic = { group = "ch.qos.logback", name = "logback-classic", version.ref = "logback" }
-logback-core = { group = "ch.qos.logback", name = "logback-core", version.ref = "logback" }
+slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
 graphql-kotlin-spring-server = { group = "com.expediagroup", name = "graphql-kotlin-spring-server", version.ref = "graphql-kotlin" }
 graphql-kotlin-hooks-provider = { group = "com.expediagroup", name = "graphql-kotlin-hooks-provider", version.ref = "graphql-kotlin" }
 jooq = { group = "org.jooq", name = "jooq", version.ref = "jooq" }
