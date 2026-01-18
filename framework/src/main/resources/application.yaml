@@ -1,0 +1,23 @@
+spring:
+  main:
+    banner-mode: OFF
+  r2dbc:
+    url: "r2dbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}"
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    pool:
+      enabled: true
+      initial-size: 2
+      max-size: 10
+  flyway:
+    url: "jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}"
+  jooq:
+    sql-dialect: POSTGRES
+  webflux:
+    problemdetails:
+      enabled: true
+graphql:
+  packages:
+    - 'com.wakita181009.cleanarchitecture.presentation.graphql'
+app:
+  jira-api-token: ${JIRA_API_TOKEN}

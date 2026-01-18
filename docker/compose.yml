@@ -1,0 +1,12 @@
+version: '3.1'
+services:
+  postgres:
+    container_name: clean_architecture_kotlin
+    image: postgres:18-alpine
+    restart: always
+    ports:
+      - "6685:5432"
+    environment:
+      POSTGRES_USER: ca_kotlin
+      POSTGRES_PASSWORD: ca_kotlin
+      POSTGRES_DB: ca_kotlin
