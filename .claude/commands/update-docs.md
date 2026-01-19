@@ -1,33 +1,60 @@
-Review recent commits and update .claude/ documentation if needed.
+# Update Documentation
 
-## Steps
+Sync documentation from source-of-truth:
 
-1. Check recent commits:
-   ```bash
-   git log --oneline -10
-   git diff HEAD~${ARGUMENTS:-1}
-   ```
+1. Read `build.gradle.kts` and `gradle/libs.versions.toml`
+   - Extract dependencies and versions
+   - Document tech stack
 
-2. Analyze changes for documentation impact:
-   - New patterns or conventions introduced
-   - Changes to existing patterns (value objects, entities, etc.)
-   - New commands, jobs, or API integrations added
-   - Critical rules affected
-   - New dependencies or tech stack changes
+2. Read `.env.sample`
+   - Extract all environment variables
+   - Document purpose and format
 
-3. If updates needed, edit the appropriate files:
-   - `.claude/CLAUDE.md` - Quick reference, critical rules
-   - `.claude/docs/architecture.md` - Layer structure, module responsibilities
-   - `.claude/docs/api-integration.md` - External API patterns
-   - `.claude/docs/database.md` - jOOQ, Flyway patterns
-   - `.claude/docs/domain-modeling.md` - Entity, value object patterns
-   - `.claude/docs/job-runner.md` - Background job patterns
-   - `.claude/docs/selective-sync-pattern.md` - Data sync patterns
+3. Read existing `README.md` and `.claude/CLAUDE.md`
+   - Identify outdated sections
+   - Update command references
 
-4. Report what was updated or confirm "No documentation updates needed."
+4. Update `.claude/docs/` files:
+   - `architecture.md` - Layer structure and patterns
+   - `database.md` - Schema and migration info
+   - `api-integration.md` - External API patterns
 
-## Usage
+5. Identify obsolete documentation:
+   - Find docs not modified in 90+ days
+   - List for manual review
 
-- `/update-docs` - Check last commit (default)
-- `/update-docs 3` - Check last 3 commits
-- `/update-docs abc123` - Check specific commit
+6. Show diff summary
+
+## Source of Truth
+
+- `build.gradle.kts` - Dependencies and build configuration
+- `gradle/libs.versions.toml` - Version catalog
+- `.env.sample` - Environment variables
+- `infrastructure/src/main/resources/db/migration/` - Database schema
+- `domain/` - Entity and value object definitions
+
+## Documentation Structure
+
+```
+.claude/
+├── CLAUDE.md           # Main project instructions
+├── docs/
+│   ├── architecture.md # Clean Architecture guide
+│   ├── database.md     # jOOQ and Flyway patterns
+│   ├── presentation.md # GraphQL patterns
+│   └── ...
+└── rules/
+    ├── coding-style.md
+    ├── testing.md
+    └── ...
+```
+
+## Commands
+
+```bash
+# Generate jOOQ code (updates database docs)
+./gradlew :infrastructure:jooqCodegen
+
+# Check for outdated dependencies
+./gradlew dependencyUpdates
+```

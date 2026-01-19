@@ -1,10 +1,15 @@
+---
+name: domain-modeling
+description: Domain modeling patterns for Kotlin. Value objects, entities, enums with computed properties, and type-safe domain concepts.
+---
+
 # Domain Modeling Patterns
 
-This document defines patterns for modeling domain concepts.
+Patterns for modeling domain concepts in the domain layer.
 
 ## Overview
 
-Domain models are defined in the `domain/` module with no external dependencies (except Arrow-kt). The domain layer consists of:
+Domain models are defined in the `domain/` module with no external dependencies (except Arrow-kt):
 
 - **Entities**: Objects with identity and lifecycle
 - **Value Objects**: Immutable objects defined by their attributes
@@ -41,18 +46,10 @@ value class JiraIssueKey private constructor(
 **Benefits:**
 - Zero runtime overhead (inline at compile time)
 - Type safety (prevents mixing different IDs)
-- **Private constructor**: Prevents direct instantiation, enables future validation
+- **Private constructor**: Enables future validation
 - **Invoke operator**: Same syntax as constructor (`JiraIssueId(123)`)
-- **Extensibility**: Easy to add validation logic in `invoke()` later
 
-**Usage (same as regular constructor):**
-```kotlin
-// In adapters/repositories - same syntax works
-val id = JiraIssueId(record.id!!)
-val key = JiraIssueKey("FT-123")
-```
-
-### Value Object with Validation (Future Pattern)
+### Value Object with Validation
 
 When validation is needed, add it to the `invoke` operator:
 
@@ -74,10 +71,9 @@ value class JiraIssueKey private constructor(
 
 ### Value Object with Either Validation
 
-For value objects that require validation, use `Either` with a dedicated error type:
+For value objects requiring validation with error handling:
 
 ```kotlin
-// domain/valueobject/PageNumber.kt
 @JvmInline
 value class PageNumber private constructor(
     val value: Int,
@@ -94,57 +90,17 @@ value class PageNumber private constructor(
             }
     }
 }
-
-// domain/error/PageNumberError.kt
-sealed class PageNumberError(val message: String) {
-    data class BelowMinimum(val value: Int) : PageNumberError(
-        "Page number must be at least ${PageNumber.MIN_VALUE}, but was $value"
-    )
-}
 ```
 
 **Pattern**: Two creation methods:
 - `invoke(value)` - Direct creation (trusted input, internal use)
 - `of(value): Either<Error, T>` - Validated creation (external input)
 
-### Pagination Value Objects
-
-Standard pagination types in `domain/valueobject/`:
-
-```kotlin
-// Page.kt - Generic paginated result
-data class Page<T>(
-    val totalCount: Int,
-    val items: List<T>,
-)
-
-// PageNumber.kt - 1-based page number
-@JvmInline value class PageNumber private constructor(val value: Int) { ... }
-
-// PageSize.kt - Page size with min/max constraints
-@JvmInline value class PageSize private constructor(val value: Int) {
-    companion object {
-        const val MIN_VALUE: Int = 1
-        const val MAX_VALUE: Int = 100
-        // ...
-    }
-}
-```
-
-### Value Object Naming Conventions
-
-| Pattern | Example | Usage |
-|---------|---------|-------|
-| `{Entity}Id` | `JiraIssueId`, `JiraProjectId` | Primary identifiers |
-| `{Entity}Key` | `JiraIssueKey`, `JiraProjectKey` | External/business keys |
-| `Page{Number\|Size}` | `PageNumber`, `PageSize` | Pagination parameters |
-| `Page<T>` | `Page<JiraIssue>` | Paginated result wrapper |
-
 ## Enum Patterns
 
 ### Enum with Computed Properties
 
-Add computed properties for domain logic that depends on the enum value:
+Add computed properties for domain logic:
 
 ```kotlin
 // domain/valueobject/jira/JiraIssuePriority.kt
@@ -173,14 +129,7 @@ enum class JiraIssueType {
 }
 ```
 
-**Use Cases:**
-- Business rules based on enum values
-- Categorization logic
-- Priority/severity checks
-
-**Naming:**
-- Use UPPERCASE for enum values (Kotlin convention for constants)
-- Match domain terminology, not API response values
+**Naming**: Use UPPERCASE for enum values (Kotlin convention for constants)
 
 ## Entity Patterns
 
@@ -206,12 +155,6 @@ data class JiraIssue(
         get() = issueType.isBug && priority.isCritical
 }
 ```
-
-**Common Derived Properties:**
-
-| Property | Derivation | Example |
-|----------|------------|---------|
-| `isCriticalBug` | `issueType.isBug && priority.isCritical` | Critical bug detection |
 
 ## Entity vs Value Object
 
@@ -239,24 +182,6 @@ domain/src/main/kotlin/com/wakita181009/cleanarchitecture/domain/
         ├── JiraProjectId.kt
         └── JiraProjectKey.kt
 ```
-
-## Implementation Checklist
-
-When adding a new domain concept:
-
-- [ ] Determine if it's an Entity or Value Object
-- [ ] For Value Objects:
-  - [ ] Use `@JvmInline value class` with **private constructor**
-  - [ ] Add `companion object` with `operator fun invoke()`
-  - [ ] Follow naming convention: `{Entity}{Attribute}`
-- [ ] For Enums:
-  - [ ] Use UPPERCASE for values (Kotlin convention)
-  - [ ] Add computed properties for domain logic
-- [ ] For Entities:
-  - [ ] Use `data class`
-  - [ ] Reference Value Objects for typed fields (not primitives)
-  - [ ] Add domain logic as computed properties
-  - [ ] Keep entities immutable (no `var` properties)
 
 ## Anti-Patterns
 
@@ -290,11 +215,7 @@ data class JiraIssue(...) {
     val isCriticalBug: Boolean get() = issueType.isBug && priority.isCritical
 }
 
-// Repository just returns data
-class JiraIssueRepositoryImpl : JiraIssueRepository {
-    fun findAll(): List<JiraIssue>
-}
-// UseCase filters using domain logic
+// Repository returns data, UseCase filters using domain logic
 val criticalBugs = issues.filter { it.isCriticalBug }
 ```
 
@@ -312,3 +233,21 @@ enum class JiraIssuePriority {
 }
 if (issue.priority.isCritical) { ... }
 ```
+
+## Implementation Checklist
+
+When adding a new domain concept:
+
+- [ ] Determine if it's an Entity or Value Object
+- [ ] For Value Objects:
+  - [ ] Use `@JvmInline value class` with **private constructor**
+  - [ ] Add `companion object` with `operator fun invoke()`
+  - [ ] Follow naming convention: `{Entity}{Attribute}`
+- [ ] For Enums:
+  - [ ] Use UPPERCASE for values
+  - [ ] Add computed properties for domain logic
+- [ ] For Entities:
+  - [ ] Use `data class`
+  - [ ] Reference Value Objects for typed fields (not primitives)
+  - [ ] Add domain logic as computed properties
+  - [ ] Keep entities immutable (no `var` properties)

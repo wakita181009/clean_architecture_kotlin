@@ -7,7 +7,7 @@ import com.wakita181009.cleanarchitecture.domain.valueobject.jira.JiraProjectKey
 import kotlinx.coroutines.flow.Flow
 import java.time.OffsetDateTime
 
-interface JiraApiClient {
+interface JiraIssuePort {
     fun fetchIssues(
         projectKeys: List<JiraProjectKey>,
         since: OffsetDateTime,

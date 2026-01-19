@@ -4,7 +4,7 @@ import arrow.core.Either
 import arrow.core.raise.either
 import com.wakita181009.cleanarchitecture.application.error.jira.JiraIssueSyncError
 import com.wakita181009.cleanarchitecture.application.port.TransactionExecutor
-import com.wakita181009.cleanarchitecture.domain.port.jira.JiraApiClient
+import com.wakita181009.cleanarchitecture.domain.port.jira.JiraIssuePort
 import com.wakita181009.cleanarchitecture.domain.repository.jira.JiraIssueRepository
 import com.wakita181009.cleanarchitecture.domain.repository.jira.JiraProjectRepository
 import org.slf4j.LoggerFactory
@@ -13,7 +13,7 @@ import java.time.OffsetDateTime
 class JiraIssueSyncUseCaseImpl(
     private val jiraProjectRepository: JiraProjectRepository,
     private val jiraIssueRepository: JiraIssueRepository,
-    private val jiraApiClient: JiraApiClient,
+    private val jiraIssuePort: JiraIssuePort,
     private val transactionExecutor: TransactionExecutor,
 ) : JiraIssueSyncUseCase {
     private val logger =
@@ -41,7 +41,7 @@ class JiraIssueSyncUseCaseImpl(
             logger.info("Found {} project keys: {}", projectKeys.size, projectKeys.map { it.value })
 
             var totalCount = 0
-            jiraApiClient
+            jiraIssuePort
                 .fetchIssues(projectKeys, since)
                 .collect { result ->
                     result

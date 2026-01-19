@@ -10,7 +10,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.wakita181009.cleanarchitecture.domain.entity.jira.JiraIssue
 import com.wakita181009.cleanarchitecture.domain.error.JiraError
-import com.wakita181009.cleanarchitecture.domain.port.jira.JiraApiClient
+import com.wakita181009.cleanarchitecture.domain.port.jira.JiraIssuePort
 import com.wakita181009.cleanarchitecture.domain.valueobject.jira.JiraProjectKey
 import io.github.resilience4j.core.IntervalFunction
 import io.github.resilience4j.kotlin.retry.decorateSuspendFunction
@@ -31,10 +31,10 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
 @Component
-class JiraApiClientImpl(
+class JiraIssueAdapterImpl(
     private val okHttpClient: OkHttpClient,
     @param:Qualifier("jiraApiToken") private val jiraApiToken: String,
-) : JiraApiClient {
+) : JiraIssuePort {
     companion object {
         private const val MAX_RESULTS = 100
         private const val MAX_ATTEMPTS = 3

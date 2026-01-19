@@ -1,8 +1,10 @@
 package com.wakita181009.cleanarchitecture.framework
 
+import com.wakita181009.cleanarchitecture.framework.runner.SyncJobRunner
+import org.springframework.boot.WebApplicationType
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.builder.SpringApplicationBuilder
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
-import org.springframework.boot.runApplication
 import org.springframework.context.annotation.ComponentScan
 
 @SpringBootApplication
@@ -19,5 +21,8 @@ import org.springframework.context.annotation.ComponentScan
 open class Application
 
 fun main(args: Array<String>) {
-    runApplication<Application>(*args)
+    val isJobMode = SyncJobRunner.isJobMode(args)
+    SpringApplicationBuilder(Application::class.java)
+        .web(if (isJobMode) WebApplicationType.NONE else WebApplicationType.REACTIVE)
+        .run(*args)
 }

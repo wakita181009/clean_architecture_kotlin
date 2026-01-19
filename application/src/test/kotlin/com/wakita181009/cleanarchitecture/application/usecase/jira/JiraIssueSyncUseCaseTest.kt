@@ -9,7 +9,7 @@ import com.wakita181009.cleanarchitecture.application.fixture.JiraFixtures
 import com.wakita181009.cleanarchitecture.application.port.TransactionExecutor
 import com.wakita181009.cleanarchitecture.domain.entity.jira.JiraIssue
 import com.wakita181009.cleanarchitecture.domain.error.JiraError
-import com.wakita181009.cleanarchitecture.domain.port.jira.JiraApiClient
+import com.wakita181009.cleanarchitecture.domain.port.jira.JiraIssuePort
 import com.wakita181009.cleanarchitecture.domain.repository.jira.JiraIssueRepository
 import com.wakita181009.cleanarchitecture.domain.repository.jira.JiraProjectRepository
 import com.wakita181009.cleanarchitecture.domain.valueobject.jira.JiraProjectKey
@@ -31,14 +31,14 @@ import kotlin.test.Test
 class JiraIssueSyncUseCaseTest {
     private val jiraProjectRepository = mockk<JiraProjectRepository>()
     private val jiraIssueRepository = mockk<JiraIssueRepository>()
-    private val jiraApiClient = mockk<JiraApiClient>()
+    private val jiraIssuePort = mockk<JiraIssuePort>()
     private val transactionExecutor = mockk<TransactionExecutor>()
 
     private val useCase =
         JiraIssueSyncUseCaseImpl(
             jiraProjectRepository = jiraProjectRepository,
             jiraIssueRepository = jiraIssueRepository,
-            jiraApiClient = jiraApiClient,
+            jiraIssuePort = jiraIssuePort,
             transactionExecutor = transactionExecutor,
         )
 
@@ -71,7 +71,7 @@ class JiraIssueSyncUseCaseTest {
                     .createJiraIssues(5)
 
             coEvery { jiraProjectRepository.findAllProjectKeys() } returns projectKeys.right()
-            every { jiraApiClient.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns flowOf(issues.right())
+            every { jiraIssuePort.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns flowOf(issues.right())
             coEvery { jiraIssueRepository.bulkUpsert(issues) } returns issues.right()
 
             val result = useCase.execute()
@@ -100,7 +100,7 @@ class JiraIssueSyncUseCaseTest {
                     .createJiraIssues(10)
 
             coEvery { jiraProjectRepository.findAllProjectKeys() } returns projectKeys.right()
-            every { jiraApiClient.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns flowOf(issues.right())
+            every { jiraIssuePort.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns flowOf(issues.right())
             coEvery { jiraIssueRepository.bulkUpsert(issues) } returns issues.right()
 
             val result = useCase.execute()
@@ -134,7 +134,7 @@ class JiraIssueSyncUseCaseTest {
                 )
 
             coEvery { jiraProjectRepository.findAllProjectKeys() } returns projectKeys.right()
-            every { jiraApiClient.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns
+            every { jiraIssuePort.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns
                 flow {
                     emit(page1.right())
                     emit(page2.right())
@@ -159,7 +159,7 @@ class JiraIssueSyncUseCaseTest {
             val emptyProjectKeys = emptyList<JiraProjectKey>()
 
             coEvery { jiraProjectRepository.findAllProjectKeys() } returns emptyProjectKeys.right()
-            every { jiraApiClient.fetchIssues(emptyProjectKeys, any<OffsetDateTime>()) } returns emptyFlow()
+            every { jiraIssuePort.fetchIssues(emptyProjectKeys, any<OffsetDateTime>()) } returns emptyFlow()
 
             val result = useCase.execute()
 
@@ -176,7 +176,7 @@ class JiraIssueSyncUseCaseTest {
                 )
 
             coEvery { jiraProjectRepository.findAllProjectKeys() } returns projectKeys.right()
-            every { jiraApiClient.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns emptyFlow()
+            every { jiraIssuePort.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns emptyFlow()
 
             val result = useCase.execute()
 
@@ -199,7 +199,7 @@ class JiraIssueSyncUseCaseTest {
                 )
 
             coEvery { jiraProjectRepository.findAllProjectKeys() } returns projectKeys.right()
-            every { jiraApiClient.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns flowOf(issues.right())
+            every { jiraIssuePort.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns flowOf(issues.right())
             coEvery { jiraIssueRepository.bulkUpsert(issues) } returns issues.right()
 
             val result = useCase.execute()
@@ -240,7 +240,7 @@ class JiraIssueSyncUseCaseTest {
                     .ApiError("API rate limit exceeded")
 
             coEvery { jiraProjectRepository.findAllProjectKeys() } returns projectKeys.right()
-            every { jiraApiClient.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns flowOf(apiError.left())
+            every { jiraIssuePort.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns flowOf(apiError.left())
 
             val result = useCase.execute()
 
@@ -268,7 +268,7 @@ class JiraIssueSyncUseCaseTest {
                     .DatabaseError("Insert failed")
 
             coEvery { jiraProjectRepository.findAllProjectKeys() } returns projectKeys.right()
-            every { jiraApiClient.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns flowOf(issues.right())
+            every { jiraIssuePort.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns flowOf(issues.right())
             coEvery { jiraIssueRepository.bulkUpsert(issues) } returns dbError.left()
 
             val result = useCase.execute()
@@ -297,7 +297,7 @@ class JiraIssueSyncUseCaseTest {
                     .ApiError("API timeout")
 
             coEvery { jiraProjectRepository.findAllProjectKeys() } returns projectKeys.right()
-            every { jiraApiClient.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns
+            every { jiraIssuePort.fetchIssues(projectKeys, any<OffsetDateTime>()) } returns
                 flow {
                     emit(page1.right())
                     emit(apiError.left())

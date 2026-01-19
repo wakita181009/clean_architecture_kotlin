@@ -13,6 +13,8 @@ abstract class SyncJobRunner<E> : ApplicationRunner {
 
     companion object {
         private const val JOB_OPTION = "job"
+
+        fun isJobMode(args: Array<String>): Boolean = args.any { it.startsWith("--$JOB_OPTION=") }
     }
 
     protected abstract val jobName: String

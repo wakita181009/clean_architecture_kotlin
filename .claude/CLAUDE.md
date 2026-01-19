@@ -99,7 +99,7 @@ Access GraphQL Playground at: `http://localhost:8080/playground`
 ├── domain/                    # Pure business logic (no dependencies)
 │   ├── entity/jira/          # JiraIssue
 │   ├── valueobject/jira/     # JiraIssueId, JiraIssueKey, JiraIssuePriority, JiraIssueType, etc.
-│   ├── port/jira/            # JiraApiClient interface
+│   ├── port/jira/            # JiraIssuePort interface
 │   ├── repository/jira/      # JiraIssueRepository, JiraProjectRepository interfaces
 │   └── error/                # DomainError, JiraError
 │
@@ -107,11 +107,12 @@ Access GraphQL Playground at: `http://localhost:8080/playground`
 │   ├── port/               # TransactionExecutor interface
 │   ├── usecase/jira/        # JiraIssueSyncUseCase (interface), JiraIssueSyncUseCaseImpl (impl)
 │   │                        # JiraIssueFindByIdsUseCase (interface), JiraIssueFindByIdsUseCaseImpl (impl)
-│   └── error/               # ApplicationError, TransactionError, jira/JiraIssueSyncError, jira/JiraIssueFindByIdError
+│   │                        # JiraIssueListUseCase (interface), JiraIssueListUseCaseImpl (impl)
+│   └── error/               # ApplicationError, TransactionError, jira/JiraIssueSyncError, jira/JiraIssueFindByIdError, jira/JiraIssueListError
 │
 ├── infrastructure/           # External integrations
 │   ├── adapter/             # TransactionExecutorImpl
-│   │   └── jira/           # JiraApiClientImpl, JiraApiDto
+│   │   └── jira/           # JiraIssueAdapterImpl, JiraApiDto
 │   ├── repository/jira/     # JiraIssueRepositoryImpl, JiraProjectRepositoryImpl
 │   ├── config/              # FlywayConfig, JooqConfig, OkHttpConfig
 │   └── src/generated/       # jOOQ generated code (DO NOT EDIT)
@@ -119,7 +120,7 @@ Access GraphQL Playground at: `http://localhost:8080/playground`
 ├── presentation/             # API layer
 │   └── graphql/
 │       ├── query/           # JiraIssueQuery
-│       ├── types/           # JiraIssue (GraphQL type)
+│       ├── types/           # JiraIssue, JiraIssueList, PaginatedList (GraphQL types)
 │       ├── dataloader/      # JiraIssueDataLoader
 │       └── hooks/           # CustomSchemaGeneratorHooks
 │
@@ -146,10 +147,10 @@ Copy `.env.sample` to `.env`:
 
 ## Documentation
 
-Detailed implementation guides in `.claude/docs/`:
-- `architecture.md` - Clean architecture layer responsibilities
-- `presentation.md` - GraphQL queries, DataLoaders, custom hooks
-- `api-integration.md` - External API integration patterns
-- `database.md` - jOOQ and Flyway patterns
-- `domain-modeling.md` - Entity and value object patterns
-- `job-runner.md` - Background job implementation
+Detailed implementation guides in `.claude/skills/`:
+- `clean-architecture/SKILL.md` - Clean architecture layer responsibilities
+- `graphql-presentation/SKILL.md` - GraphQL queries, DataLoaders, custom hooks
+- `api-integration/SKILL.md` - External API integration patterns
+- `jooq-database/SKILL.md` - jOOQ and Flyway patterns
+- `domain-modeling/SKILL.md` - Entity and value object patterns
+- `job-runner/SKILL.md` - Background job implementation

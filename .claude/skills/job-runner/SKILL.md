@@ -1,6 +1,11 @@
+---
+name: job-runner
+description: Background job runner pattern using Template Method. SyncJobRunner base class, concrete runner implementation, and execution patterns.
+---
+
 # Background Job Runner Pattern
 
-This document defines patterns for implementing background jobs (runners).
+Patterns for implementing background jobs (runners).
 
 ## Overview
 
@@ -13,7 +18,7 @@ Background jobs are implemented as Spring `ApplicationRunner` components that:
 
 ## Template Method Pattern with SyncJobRunner
 
-The project uses a **Template Method Pattern** with an abstract `SyncJobRunner<E>` base class to eliminate boilerplate code and ensure consistent behavior across all runners.
+The project uses a **Template Method Pattern** with an abstract `SyncJobRunner<E>` base class.
 
 ### Base Class: SyncJobRunner
 
@@ -83,8 +88,6 @@ Concrete runners extend `SyncJobRunner` and only need to define:
 2. `entityName` - Human-readable name for logging
 3. `execute()` - The actual sync logic
 
-### Simple Runner
-
 ```kotlin
 // framework/runner/jira/JiraIssueSyncRunner.kt
 @Component
@@ -133,21 +136,7 @@ docker run <image> --job=sync-jira-issue
 
 ## Testing Considerations
 
-### Excluding Runners from Tests
-
-Runners do NOT use `@Profile("!test")` annotation. Instead, `SyncJobRunner.shouldRunJob()` checks for the `--job` argument using `.firstOrNull()`, which won't be present during tests.
-
-```kotlin
-// In SyncJobRunner base class:
-private fun shouldRunJob(args: ApplicationArguments): Boolean =
-    args.getOptionValues(JOB_OPTION)?.firstOrNull() == jobName
-
-// During tests:
-// 1. No --job argument is provided
-// 2. firstOrNull() returns null
-// 3. null != jobName evaluates to false
-// 4. shouldRunJob() returns false, runner exits early
-```
+Runners do NOT use `@Profile("!test")` annotation. Instead, `SyncJobRunner.shouldRunJob()` checks for the `--job` argument, which won't be present during tests.
 
 ## Naming Conventions
 
@@ -159,6 +148,15 @@ private fun shouldRunJob(args: ApplicationArguments): Boolean =
 | Entity name | Human-readable | `"Jira issue"` |
 | UseCase | `{Entity}SyncUseCase` | `JiraIssueSyncUseCase` |
 
+## File Organization
+
+```
+framework/src/main/kotlin/com/wakita181009/cleanarchitecture/framework/runner/
+├── SyncJobRunner.kt           # Abstract base class (Template Method)
+└── jira/
+    └── JiraIssueSyncRunner.kt # Jira issue sync
+```
+
 ## Implementation Checklist
 
 When adding a new background job:
@@ -167,7 +165,7 @@ When adding a new background job:
 - [ ] Define `override val jobName: String` with job CLI argument
 - [ ] Define `override val entityName: String` for logging
 - [ ] Implement `override suspend fun execute(): Either<ErrorType, Int>`
-- [ ] Inject required UseCase and properties via constructor
+- [ ] Inject required UseCase via constructor
 - [ ] Document the job name in CLAUDE.md
 
 ### What You DON'T Need To Do
@@ -180,12 +178,3 @@ Thanks to `SyncJobRunner`, you don't need to:
 - Implement logging (start, success, error)
 - Handle `exitProcess` calls
 - Create `runBlocking` wrapper
-
-## File Organization
-
-```
-framework/src/main/kotlin/com/wakita181009/cleanarchitecture/framework/runner/
-├── SyncJobRunner.kt           # Abstract base class (Template Method)
-└── jira/
-    └── JiraIssueSyncRunner.kt # Jira issue sync
-```

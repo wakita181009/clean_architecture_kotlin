@@ -1,6 +1,11 @@
+---
+name: api-integration
+description: External API integration patterns. Port/Adapter implementation, DTOs, pagination, retry with exponential backoff, and error handling.
+---
+
 # External API Integration Patterns
 
-This document defines patterns for integrating with external APIs.
+Patterns for integrating with external APIs.
 
 ## Overview
 
@@ -16,8 +21,8 @@ External API integrations follow a consistent pattern:
 Ports are defined in the domain layer and return `Flow<Either<Error, List<Entity>>>` for streaming data with pagination.
 
 ```kotlin
-// domain/port/jira/JiraApiClient.kt
-interface JiraApiClient {
+// domain/port/jira/JiraIssuePort.kt
+interface JiraIssuePort {
     fun fetchIssues(
         projectKeys: List<JiraProjectKey>,
         since: OffsetDateTime,
@@ -34,17 +39,14 @@ interface JiraApiClient {
 
 ## Adapter Implementation Pattern
 
-Adapters are implemented in the infrastructure layer with consistent structure.
-
 ```kotlin
 @Component
-class JiraApiClientImpl(
+class JiraIssueAdapterImpl(
     private val okHttpClient: OkHttpClient,
     @param:Qualifier("jiraApiToken") private val jiraApiToken: String,
-) : JiraApiClient {
+) : JiraIssuePort {
 
     companion object {
-        // Configuration constants
         private const val BASE_URL = "https://your-domain.atlassian.net/rest/api/3"
         private const val MAX_RESULTS = 100
         private const val MAX_ATTEMPTS = 3
@@ -52,13 +54,11 @@ class JiraApiClientImpl(
         private const val BACKOFF_MULTIPLIER = 2.0
         private const val API_CALL_DELAY_MS = 1000L
 
-        // JSON mapper configuration
         private val jsonMapper = jacksonObjectMapper().apply {
             registerModule(JavaTimeModule())
             configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         }
 
-        // Retry configuration
         private val retryConfig = RetryConfig.custom<Any>()
             .maxAttempts(MAX_ATTEMPTS)
             .intervalFunction(
@@ -87,34 +87,12 @@ class JiraApiClientImpl(
 }
 ```
 
-### Companion Object Structure
-
-Always include in companion object:
-
-| Constant | Purpose | Example |
-|----------|---------|---------|
-| `BASE_URL` | API base URL | `https://example.atlassian.net/rest/api/3` |
-| `MAX_RESULTS` | Pagination size | `100` |
-| `MAX_ATTEMPTS` | Retry attempts | `3` |
-| `INITIAL_BACKOFF_INTERVAL` | Initial backoff (ms) | `500L` |
-| `BACKOFF_MULTIPLIER` | Backoff multiplier | `2.0` |
-| `API_CALL_DELAY_MS` | Rate limiting delay | `1000L` |
-| `jsonMapper` | Jackson ObjectMapper | Configure with JavaTimeModule |
-| `retryConfig` | Resilience4j config | Exponential backoff |
-
 ## DTO Pattern
 
 DTOs are defined alongside the adapter and include `toDomain()` conversion methods.
 
 ```kotlin
 // infrastructure/adapter/jira/JiraApiDto.kt
-data class JiraSearchRequest(
-    val jql: String,
-    val fields: List<String>,
-    val maxResults: Int,
-    val nextPageToken: String?,
-)
-
 data class JiraSearchResponse(
     val issues: List<JiraIssueResponse>,
     val isLast: Boolean,
@@ -126,7 +104,7 @@ data class JiraIssueResponse(
     val key: String,
     val fields: JiraIssueFields,
 ) {
-    // Nullable return type - gracefully handles unknown enum values from API
+    // Nullable return type - gracefully handles unknown enum values
     fun toDomain(): JiraIssue? {
         val issueType = JiraIssueType.entries.find { it.name == fields.issuetype.name }
             ?: return null  // Skip unknown issue types
@@ -136,27 +114,15 @@ data class JiraIssueResponse(
             id = JiraIssueId(id),
             projectId = JiraProjectId(fields.project.id),
             key = JiraIssueKey(key),
-            summary = fields.summary,
-            description = fields.description?.toString(),
-            issueType = issueType,
-            priority = priority,
-            createdAt = fields.created,
-            updatedAt = fields.updated,
+            // ...
         )
     }
 }
 ```
 
-### DTO Guidelines
-
-1. **Use `@JsonProperty`** for snake_case to camelCase conversion
-2. **Define `toDomain()`** method on each DTO
-3. **Handle nullable fields** appropriately
-4. **Graceful handling**: Return `null` for unknown enum values
-
 ## Pagination Patterns
 
-### Cursor-Based Pagination (Jira)
+### Cursor-Based Pagination
 
 ```kotlin
 var nextPageToken: String? = null
@@ -199,46 +165,7 @@ Retry.of("fetchData", retryConfig)
 | 2 | 1000ms |
 | 3 | 2000ms |
 
-## HTTP Request Building
-
-### Standard Headers (Jira Basic Auth)
-
-```kotlin
-Request.Builder()
-    .url(url)
-    .addHeader("Authorization", "Basic $jiraApiToken")
-    .addHeader("Content-Type", "application/json")
-    .post(requestBody)
-    .build()
-```
-
-## Error Handling
-
-### Error Types
-
-Each API has its own sealed class for errors:
-
-```kotlin
-// domain/error/JiraError.kt
-sealed class JiraError(
-    message: String?,
-    cause: Throwable? = null,
-) : DomainError(message, cause) {
-    class DatabaseError(
-        override val message: String,
-        override val cause: Throwable? = null,
-    ) : JiraError(message, cause)
-
-    class ApiError(
-        override val message: String,
-        override val cause: Throwable? = null,
-    ) : JiraError(message, cause)
-}
-```
-
-### Error Handling Pattern in Adapters
-
-Use `Either.catch { }.mapLeft { ApiError }`:
+## Error Handling Pattern
 
 ```kotlin
 private suspend fun fetchPage(
@@ -268,6 +195,30 @@ private suspend fun fetchPage(
         }
 ```
 
+## Selective Sync Pattern
+
+Reduce API calls by only processing records within a specific time window:
+
+```kotlin
+class JiraIssueSyncUseCaseImpl(...) : JiraIssueSyncUseCase {
+    companion object {
+        private const val SYNC_WINDOW_DAYS = 180L
+    }
+
+    override suspend fun execute(): Either<JiraIssueSyncError, Int> =
+        either {
+            val since = OffsetDateTime.now().minusDays(SYNC_WINDOW_DAYS)
+            jiraIssuePort.fetchIssues(projectKeys, since).collect { ... }
+        }
+}
+```
+
+| Scenario | Recommended Window | Reason |
+|----------|-------------------|--------|
+| Active development | 180 days | Captures active work |
+| Recent activity | 90 days | Focused analysis |
+| Historical data | 365 days | Comprehensive dataset |
+
 ## Implementation Checklist
 
 When adding a new API integration:
@@ -280,6 +231,4 @@ When adding a new API integration:
 - [ ] Configure retry with exponential backoff
 - [ ] Add rate limiting delay between API calls
 - [ ] Handle pagination (cursor or offset based)
-- [ ] Add proper error handling
 - [ ] Register API token bean in `AdapterConfig`
-- [ ] Add configuration property in `AppProperties`
