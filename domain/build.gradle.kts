@@ -10,4 +10,12 @@ dependencies {
     api(libs.arrow.resilience)
     // Logging
     api(libs.slf4j.api)
+    // Test dependencies
+    testImplementation(kotlin("test"))
+    testImplementation(libs.kotest.assertions.core)
+    testImplementation(libs.kotest.assertions.arrow)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
